@@ -11,4 +11,5 @@ type Service interface {
 	Shutdown() error
 	WithLogger(logger *zap.Logger)
 	Statistics() map[string]float64
+	LastError() error
 }

@@ -14,10 +14,11 @@ type HttpC struct {
 	*http.Client
 
 	config *Config
-	logger *zap.Logger
 
 	closed chan struct{}
 	ctx    context.Context
+
+	err error
 }
 
 func New(config *Config, ctx context.Context) *HttpC {
@@ -64,9 +65,13 @@ func (h *HttpC) Shutdown() error {
 }
 
 func (h *HttpC) WithLogger(logger *zap.Logger) {
-	h.logger = logger.Named(h.Name())
+
 }
 
 func (h *HttpC) Statistics() map[string]float64 {
 	return nil
+}
+
+func (h *HttpC) LastError() error {
+	return h.err
 }

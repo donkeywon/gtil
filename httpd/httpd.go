@@ -3,6 +3,7 @@ package httpd
 import (
 	"context"
 	"github.com/gorilla/mux"
+	"go.uber.org/multierr"
 	"go.uber.org/zap"
 	"net/http"
 )
@@ -14,13 +15,13 @@ const (
 type HttpD struct {
 	config *Config
 
-	logger *zap.Logger
-
 	server *http.Server
 
 	closed chan struct{}
 
 	ctx context.Context
+
+	err error
 }
 
 func newHTTPServer(config *Config) *http.Server {
@@ -53,11 +54,9 @@ func (s *HttpD) Open() error {
 		<-s.ctx.Done()
 		err := s.Close()
 		if err != nil {
-			s.logger.Error("Close http server fail", zap.Error(err))
+			s.err = multierr.Append(s.err, err)
 		}
 	}()
-
-	s.logger.Info("Open http Server")
 
 	return nil
 }
@@ -68,14 +67,10 @@ func (s *HttpD) Close() error {
 		return nil
 	default:
 		defer close(s.closed)
-		s.logger.Info("Closing")
-
 		err := s.server.Close()
 		if err != nil {
 			return err
 		}
-
-		s.logger.Info("Closed")
 	}
 
 	return nil
@@ -87,14 +82,10 @@ func (s *HttpD) Shutdown() error {
 		return nil
 	default:
 		defer close(s.closed)
-		s.logger.Info("Shutdown start")
-
 		err := s.server.Shutdown(s.ctx)
 		if err != nil {
 			return err
 		}
-
-		s.logger.Info("Shutdown done")
 	}
 	return nil
 }
@@ -104,7 +95,7 @@ func (s *HttpD) Closed() <-chan struct{} {
 }
 
 func (s *HttpD) WithLogger(logger *zap.Logger) {
-	s.logger = logger.Named(s.Name())
+
 }
 
 func (s *HttpD) SetHandler(router *mux.Router) {
@@ -113,7 +104,13 @@ func (s *HttpD) SetHandler(router *mux.Router) {
 
 func (s *HttpD) Serve() {
 	err := s.server.ListenAndServe()
-	if err != nil && err != http.ErrServerClosed {
-		s.logger.Error("Serve Fail", zap.Error(err))
-	}
+	s.err = multierr.Append(s.err, err)
+}
+
+func (s *HttpD) LastError() error {
+	return s.err
+}
+
+func (s *HttpD) Statistics() map[string]float64 {
+	return nil
 }
