@@ -79,7 +79,7 @@ func defaultEncoderConfig() zapcore.EncoderConfig {
 	return config
 }
 
-func defaultConfig() zap.Config {
+func DefaultConfig() zap.Config {
 	return zap.Config{
 		Level:             zap.NewAtomicLevelAt(DefaultLevel),
 		Development:       DefaultIsDev,
@@ -95,11 +95,7 @@ func defaultConfig() zap.Config {
 }
 
 func Default(option ...zap.Option) (*zap.Logger, error) {
-	l, err := defaultConfig().Build(option...)
-	if err != nil {
-		return nil, err
-	}
-	return l, err
+	return DefaultConfig().Build(option...)
 }
 
 func FromConfig(config zap.Config, option ...zap.Option) (*zap.Logger, error) {

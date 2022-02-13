@@ -1,7 +1,7 @@
 package httpd
 
 import (
-	"gtil/config"
+	"github.com/donkeywon/gtil/config"
 	"time"
 )
 
