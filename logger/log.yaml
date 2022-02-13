@@ -1,0 +1,33 @@
+level: debug
+development: true
+disableCaller: false
+disableStacktrace: false
+sampling:
+  initial: 100
+  thereafter: 100
+encoding: console   # json or console
+encoderConfig:
+  messageKey: msg
+  levelKey: lvl
+  timeKey: ts
+  nameKey: name
+  callerKey: caller
+  functionKey: fn
+  stacktraceKey: stacktrace
+  skipLineEnding: false
+  lineEnding: "\n"
+  levelEncoder: lowercase # capital or capitalColor or color or default(lowercase)
+  timeEncoder: # rfc3339nano or rfc3339 or iso8601 or millis or nanos or default(epoch)
+    layout: 2006-01-02 15:04:05.000000
+  durationEncoder: second # string or nanos or ms or default(second)
+  callerEncoder: short # full or default(short)
+  nameEncoder: full # full
+  consoleSeparator: "\t" # default(\t)
+outputPaths:
+  - stdout
+errorOutputPaths:
+  - stderr
+initialFields:
+  idc: wtf
+  hostname: shit
+  ip: 0.0.0.0
