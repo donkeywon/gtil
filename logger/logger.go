@@ -7,13 +7,38 @@ import (
 )
 
 const (
-	DefaultTimeFormatLayout  = "2006-01-02 15:04:05.000000"
+	JsonEncoding    = "json"
+	ConsoleEncoding = "console"
+
+	LevelEncoderCapital      = "capital"
+	LevelEncoderCapitalColor = "capitalColor"
+	LevelEncoderColor        = "color"
+	LevelEncoderLowercase    = "lowercase"
+
+	TimeEncoderRFC3339Nano = "rfc3339nano"
+	TimeEncoderRFC3339     = "rfc3339"
+	TimeEncoderISO8601     = "iso8601"
+	TimeEncoderMillis      = "millis"
+	TimeEncoderNanos       = "nanos"
+	TimeEncoderSecond      = "second"
+	TimeEncoderLayout      = "2006-01-02 15:04:05.000000"
+
+	DurationEncoderString = "string"
+	DurationEncoderNanos  = "nanos"
+	DurationEncoderMillis = "ms"
+	DurationEncoderSecond = "second"
+
+	CallerEncoderFull  = "full"
+	CallerEncoderShort = "short"
+
+	NameEncoderFull = "full"
+
 	DefaultLevel             = zap.DebugLevel
 	DefaultIsDev             = false
 	DefaultDisableCaller     = false
 	DefaultDisableStacktrace = false
 
-	DefaultEncoding                = "console"
+	DefaultEncoding                = JsonEncoding
 	DefaultEncoderMessageKey       = "msg"
 	DefaultEncoderLevelKey         = "lvl"
 	DefaultEncoderNameKey          = "logger"
@@ -23,11 +48,11 @@ const (
 	DefaultEncoderStacktraceKey    = "stacktrace"
 	DefaultEncoderSkipLineEncoding = false
 	DefaultEncoderLineEnding       = "\n"
-	DefaultEncoderLevelEncoder     = "lowercase"
-	DefaultEncoderTimeEncoder      = "layout"
-	DefaultEncoderDurationEncoder  = "string"
-	DefaultEncoderCallerEncoder    = "short"
-	DefaultEncoderNameEncoder      = "full"
+	DefaultEncoderLevelEncoder     = LevelEncoderLowercase
+	DefaultEncoderTimeEncoder      = TimeEncoderLayout
+	DefaultEncoderDurationEncoder  = DurationEncoderString
+	DefaultEncoderCallerEncoder    = CallerEncoderShort
+	DefaultEncoderNameEncoder      = NameEncoderFull
 	DefaultEncoderConsoleSeparator = "\t"
 )
 
@@ -36,18 +61,25 @@ var (
 	DefaultErrorOutputPath = []string{"stderr"}
 )
 
-func defaultEncoderConfig() zapcore.EncoderConfig {
+func buildTimeEncoder(enc string) zapcore.TimeEncoder {
+	var te zapcore.TimeEncoder
+	if enc[0] >= '0' && enc[1] <= '9' {
+		te = func(ts time.Time, encoder zapcore.PrimitiveArrayEncoder) {
+			encoder.AppendString(ts.Format(enc))
+		}
+	} else {
+		_ = te.UnmarshalText([]byte(enc))
+	}
+
+	return te
+}
+
+func defaultEncoderConfig() *zapcore.EncoderConfig {
 	var le zapcore.LevelEncoder
 	_ = le.UnmarshalText([]byte(DefaultEncoderLevelEncoder))
 
 	var te zapcore.TimeEncoder
-	if DefaultEncoderTimeEncoder == "layout" {
-		te = func(ts time.Time, encoder zapcore.PrimitiveArrayEncoder) {
-			encoder.AppendString(ts.Format(DefaultTimeFormatLayout))
-		}
-	} else {
-		_ = te.UnmarshalText([]byte(DefaultEncoderTimeEncoder))
-	}
+	te = buildTimeEncoder(DefaultEncoderTimeEncoder)
 
 	var de zapcore.DurationEncoder
 	_ = de.UnmarshalText([]byte(DefaultEncoderDurationEncoder))
@@ -58,7 +90,7 @@ func defaultEncoderConfig() zapcore.EncoderConfig {
 	var ne zapcore.NameEncoder
 	_ = ne.UnmarshalText([]byte(DefaultEncoderNameEncoder))
 
-	config := zapcore.EncoderConfig{
+	config := &zapcore.EncoderConfig{
 		MessageKey:       DefaultEncoderMessageKey,
 		LevelKey:         DefaultEncoderLevelKey,
 		TimeKey:          DefaultEncoderTimeKey,
@@ -79,19 +111,31 @@ func defaultEncoderConfig() zapcore.EncoderConfig {
 	return config
 }
 
-func DefaultConfig() zap.Config {
-	return zap.Config{
+func DefaultConfig() *zap.Config {
+	return &zap.Config{
 		Level:             zap.NewAtomicLevelAt(DefaultLevel),
 		Development:       DefaultIsDev,
 		DisableCaller:     DefaultDisableCaller,
 		DisableStacktrace: DefaultDisableStacktrace,
 		Sampling:          nil,
 		Encoding:          DefaultEncoding,
-		EncoderConfig:     defaultEncoderConfig(),
+		EncoderConfig:     *defaultEncoderConfig(),
 		OutputPaths:       DefaultOutputPath,
 		ErrorOutputPaths:  DefaultErrorOutputPath,
 		InitialFields:     nil,
 	}
+}
+
+func DefaultConsoleConfig() *zap.Config {
+	c := DefaultConfig()
+	c.Encoding = ConsoleEncoding
+	return c
+}
+
+func DefaultJsonConfig() *zap.Config {
+	c := DefaultConfig()
+	c.Encoding = JsonEncoding
+	return c
 }
 
 func Default(option ...zap.Option) (*zap.Logger, error) {
