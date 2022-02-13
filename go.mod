@@ -1,4 +1,4 @@
-module gtil
+module github.com/donkeywon/gtil
 
 go 1.17
 
