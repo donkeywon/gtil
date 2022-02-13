@@ -14,7 +14,7 @@ func TestDefault(t *testing.T) {
 }
 
 func TestParseConfig(t *testing.T) {
-	f, err := ioutil.ReadFile("D:/workspace/code/go/go-util/logger/log.yaml")
+	f, err := ioutil.ReadFile("D:/workspace/code/go/gtil/logger/log.yaml")
 	assert.NoError(t, err, "read config fail")
 
 	config := &zap.Config{}

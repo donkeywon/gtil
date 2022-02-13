@@ -14,11 +14,11 @@ import (
 )
 
 const (
-	HttpName = "http"
+	HttpSinkName = "http"
 )
 
 func init() {
-	err := zap.RegisterSink(HttpName, httpSink)
+	err := zap.RegisterSink(HttpSinkName, httpSink)
 	if err != nil {
 		fmt.Println("Register http sink fail", err)
 	}
