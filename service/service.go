@@ -47,8 +47,8 @@ func DoOpen(self Service, ctx context.Context, logger *zap.Logger) error {
     self.WithContext(ctx)
     self.WithChildContext(context.WithCancel(context.Background()))
 
-    self.Debug("Opening")
-    defer self.Debug("Opened")
+    self.Info("Opening")
+    defer self.Info("Opened")
 
     err := self.OpenChildren()
     if err != nil {
@@ -65,8 +65,8 @@ func DoOpen(self Service, ctx context.Context, logger *zap.Logger) error {
 }
 
 func DoClose(self Service) error {
-    self.Debug("Closing")
-    defer self.Debug("Closed")
+    self.Info("Closing")
+    defer self.Info("Closed")
 
     select {
     case <-self.Closed():
@@ -82,8 +82,8 @@ func DoClose(self Service) error {
 }
 
 func DoShutdown(self Service) error {
-    self.Debug("Shutting down")
-    defer self.Debug("Shutdown")
+    self.Info("Shutting down")
+    defer self.Info("Shutdown")
     select {
     case <-self.Closed():
         return nil
