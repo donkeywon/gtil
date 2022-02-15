@@ -142,6 +142,6 @@ func Default(option ...zap.Option) (*zap.Logger, error) {
 	return DefaultConfig().Build(option...)
 }
 
-func FromConfig(config zap.Config, option ...zap.Option) (*zap.Logger, error) {
+func FromConfig(config *zap.Config, option ...zap.Option) (*zap.Logger, error) {
 	return config.Build(option...)
 }

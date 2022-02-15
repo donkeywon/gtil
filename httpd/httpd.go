@@ -22,6 +22,8 @@ type HttpD struct {
 	ctx context.Context
 
 	err error
+
+	logger *zap.Logger
 }
 
 func newHTTPServer(config *Config) *http.Server {
@@ -48,10 +50,12 @@ func (s *HttpD) Name() string {
 }
 
 func (s *HttpD) Open() error {
+	s.logger.Debug("Open")
 	go s.Serve()
 
 	go func() {
 		<-s.ctx.Done()
+		s.logger.Debug("Received cancel, start close")
 		err := s.Close()
 		if err != nil {
 			s.err = multierr.Append(s.err, err)
@@ -62,6 +66,7 @@ func (s *HttpD) Open() error {
 }
 
 func (s *HttpD) Close() error {
+	s.logger.Debug("Close")
 	select {
 	case <-s.Closed():
 		return nil
@@ -77,6 +82,7 @@ func (s *HttpD) Close() error {
 }
 
 func (s *HttpD) Shutdown() error {
+	s.logger.Debug("Shutdown")
 	select {
 	case <-s.Closed():
 		return nil
@@ -95,7 +101,7 @@ func (s *HttpD) Closed() <-chan struct{} {
 }
 
 func (s *HttpD) WithLogger(logger *zap.Logger) {
-
+	s.logger = logger.Named(s.Name())
 }
 
 func (s *HttpD) SetHandler(router *mux.Router) {
