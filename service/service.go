@@ -52,12 +52,12 @@ func DoOpen(self Service, ctx context.Context, logger *zap.Logger) error {
 
     err := self.OpenChildren()
     if err != nil {
-        return errors.Wrapf(err, ErrOpen, self.Name())
+        return errors.WithMessagef(err, ErrOpenSvc, self.Name())
     }
 
     err = self.Open()
     if err != nil {
-        return errors.Wrapf(err, ErrOpen, self.Name())
+        return errors.WithMessagef(err, ErrOpenSvc, self.Name())
     }
 
     go self.ListenAndClose(self)
@@ -77,17 +77,12 @@ func DoClose(self Service) error {
         self.CloseChildren()
         self.WaitChildrenClose()
 
-        err := self.ChildrenLastError()
+        err := multierr.Combine(self.ChildrenLastError(), self.Close())
         if err != nil {
-            err = errors.Wrapf(err, ErrCloseChildren)
+            return errors.WithMessagef(err, ErrCloseSvc, self.Name())
         }
 
-        err = self.Close()
-        if err != nil {
-            err = errors.Wrapf(err, ErrClose, self.Name())
-        }
-
-        return err
+        return nil
     }
 }
 
@@ -104,16 +99,13 @@ func DoShutdown(self Service) error {
         for _, child := range self.Children() {
             err = multierr.Append(err, DoShutdown(child))
         }
+        err = multierr.Append(err, self.Shutdown())
+
         if err != nil {
-            err = errors.Wrapf(err, ErrShutdownChildren)
+            return errors.WithMessagef(err, ErrShutdownSvc, self.Name())
         }
 
-        err = self.Shutdown()
-        if err != nil {
-            err = errors.Wrapf(err, ErrShutdown, self.Name())
-        }
-
-        return err
+        return nil
     }
 }
 
@@ -168,9 +160,6 @@ func (bs *BaseService) OpenChildren() error {
     var err error
     for _, child := range bs.children {
         err = multierr.Append(err, DoOpen(child, bs.childCtx, bs.logger))
-    }
-    if err != nil {
-        err = errors.Wrapf(err, ErrOpenChildren)
     }
     return err
 }
