@@ -4,7 +4,6 @@ import (
     "context"
     "go.uber.org/multierr"
     "go.uber.org/zap"
-    "time"
 )
 
 type Service interface {
@@ -140,7 +139,6 @@ func (bs *BaseService) CloseCh() {
 func (bs *BaseService) ListenAndClose(self Service) {
     <-bs.ctx.Done()
     bs.logger.Debug("Receive cancel, start close")
-    time.Sleep(time.Second * 3)
     bs.AppendError(DoClose(self))
 }
 
