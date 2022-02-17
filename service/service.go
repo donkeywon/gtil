@@ -2,6 +2,7 @@ package service
 
 import (
     "context"
+    "github.com/pkg/errors"
     "go.uber.org/multierr"
     "go.uber.org/zap"
 )
@@ -51,12 +52,12 @@ func DoOpen(self Service, ctx context.Context, logger *zap.Logger) error {
 
     err := self.OpenChildren()
     if err != nil {
-        return err
+        return errors.Wrapf(err, ErrOpen, self.Name())
     }
 
     err = self.Open()
     if err != nil {
-        return err
+        return errors.Wrapf(err, ErrOpen, self.Name())
     }
 
     go self.ListenAndClose(self)
@@ -76,7 +77,17 @@ func DoClose(self Service) error {
         self.CloseChildren()
         self.WaitChildrenClose()
 
-        return multierr.Combine(self.Close(), self.ChildrenLastError())
+        err := self.ChildrenLastError()
+        if err != nil {
+            err = errors.Wrapf(err, ErrCloseChildren)
+        }
+
+        err = self.Close()
+        if err != nil {
+            err = errors.Wrapf(err, ErrClose, self.Name())
+        }
+
+        return err
     }
 }
 
@@ -93,7 +104,14 @@ func DoShutdown(self Service) error {
         for _, child := range self.Children() {
             err = multierr.Append(err, DoShutdown(child))
         }
-        err = multierr.Append(err, self.Shutdown())
+        if err != nil {
+            err = errors.Wrapf(err, ErrShutdownChildren)
+        }
+
+        err = self.Shutdown()
+        if err != nil {
+            err = errors.Wrapf(err, ErrShutdown, self.Name())
+        }
 
         return err
     }
@@ -150,6 +168,9 @@ func (bs *BaseService) OpenChildren() error {
     var err error
     for _, child := range bs.children {
         err = multierr.Append(err, DoOpen(child, bs.childCtx, bs.logger))
+    }
+    if err != nil {
+        err = errors.Wrapf(err, ErrOpenChildren)
     }
     return err
 }
