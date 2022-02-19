@@ -52,12 +52,12 @@ func DoOpen(self Service, ctx context.Context, logger *zap.Logger) error {
 
     err := self.OpenChildren()
     if err != nil {
-        return errors.WithMessagef(err, ErrOpenSvc, self.Name())
+        return errors.Wrapf(err, ErrOpenSvc, self.Name())
     }
 
     err = self.Open()
     if err != nil {
-        return errors.WithMessagef(err, ErrOpenSvc, self.Name())
+        return errors.Wrapf(err, ErrOpenSvc, self.Name())
     }
 
     go self.ListenAndClose(self)
@@ -79,7 +79,7 @@ func DoClose(self Service) error {
 
         err := multierr.Combine(self.ChildrenLastError(), self.Close())
         if err != nil {
-            return errors.WithMessagef(err, ErrCloseSvc, self.Name())
+            return errors.Wrapf(err, ErrCloseSvc, self.Name())
         }
 
         return nil
@@ -102,7 +102,7 @@ func DoShutdown(self Service) error {
         err = multierr.Append(err, self.Shutdown())
 
         if err != nil {
-            return errors.WithMessagef(err, ErrShutdownSvc, self.Name())
+            return errors.Wrapf(err, ErrShutdownSvc, self.Name())
         }
 
         return nil
@@ -110,7 +110,7 @@ func DoShutdown(self Service) error {
 }
 
 type BaseService struct {
-    logger      *zap.Logger
+    *zap.Logger
     ctx         context.Context
     err         error
     closed      chan struct{}
@@ -127,7 +127,7 @@ func NewBase() *BaseService {
 }
 
 func (bs *BaseService) WithLogger(self Service, logger *zap.Logger) {
-    bs.logger = logger.Named(self.Name())
+    bs.Logger = logger.Named(self.Name())
 }
 
 func (bs *BaseService) WithContext(ctx context.Context) {
@@ -148,7 +148,7 @@ func (bs *BaseService) CloseCh() {
 
 func (bs *BaseService) ListenAndClose(self Service) {
     <-bs.ctx.Done()
-    bs.logger.Debug("Receive cancel, start close")
+    bs.Debug("Receive cancel, start close")
     bs.AppendError(DoClose(self))
 }
 
@@ -159,7 +159,7 @@ func (bs *BaseService) Children() map[string]Service {
 func (bs *BaseService) OpenChildren() error {
     var err error
     for _, child := range bs.children {
-        err = multierr.Append(err, DoOpen(child, bs.childCtx, bs.logger))
+        err = multierr.Append(err, DoOpen(child, bs.childCtx, bs.Logger))
     }
     return err
 }
@@ -205,32 +205,4 @@ func (bs *BaseService) Statistics() map[string]float64 {
 
 func (bs *BaseService) LastError() error {
     return bs.err
-}
-
-func (bs *BaseService) Debug(msg string, fields ...zap.Field) {
-    bs.logger.Debug(msg, fields...)
-}
-
-func (bs *BaseService) Info(msg string, fields ...zap.Field) {
-    bs.logger.Info(msg, fields...)
-}
-
-func (bs *BaseService) Warn(msg string, fields ...zap.Field) {
-    bs.logger.Warn(msg, fields...)
-}
-
-func (bs *BaseService) Error(msg string, fields ...zap.Field) {
-    bs.logger.Error(msg, fields...)
-}
-
-func (bs *BaseService) Panic(msg string, fields ...zap.Field) {
-    bs.logger.Panic(msg, fields...)
-}
-
-func (bs *BaseService) DPanic(msg string, fields ...zap.Field) {
-    bs.logger.DPanic(msg, fields...)
-}
-
-func (bs *BaseService) Fatal(msg string, fields ...zap.Field) {
-    bs.logger.Fatal(msg, fields...)
 }

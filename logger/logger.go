@@ -1,6 +1,7 @@
 package logger
 
 import (
+    "github.com/donkeywon/gtil/logger/core"
     "go.uber.org/zap"
     "go.uber.org/zap/zapcore"
     "time"
@@ -44,7 +45,7 @@ const (
     DefaultEncoderNameKey          = "logger"
     DefaultEncoderTimeKey          = "ts"
     DefaultEncoderCallerKey        = "caller"
-    DefaultEncoderFunctionKey      = "fn"
+    DefaultEncoderFunctionKey      = ""
     DefaultEncoderStacktraceKey    = "stacktrace"
     DefaultEncoderSkipLineEncoding = false
     DefaultEncoderLineEnding       = "\n"
@@ -153,6 +154,14 @@ func DefaultProdConfig() *zap.Config {
 
 func Default(option ...zap.Option) (*zap.Logger, error) {
     return DefaultConfig().Build(option...)
+}
+
+func DefaultConsole(option ...zap.Option) (*zap.Logger, error) {
+    return DefaultConsoleConfig().Build(append(option, zap.WrapCore(core.NewStackExtractCore))...)
+}
+
+func DefaultJson(option ...zap.Option) (*zap.Logger, error) {
+    return DefaultJsonConfig().Build(option...)
 }
 
 func FromConfig(config *zap.Config, option ...zap.Option) (*zap.Logger, error) {

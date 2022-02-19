@@ -12,7 +12,7 @@ encoderConfig:
   timeKey: ts
   nameKey: name
   callerKey: caller
-  functionKey: fn
+  functionKey: ""
   stacktraceKey: stacktrace
   skipLineEnding: false
   lineEnding: "\n"
