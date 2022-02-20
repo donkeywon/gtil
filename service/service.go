@@ -21,7 +21,8 @@ type Service interface {
 	CloseCh()
 	ListenAndClose(self Service)
 
-	Children() map[string]Service
+	GetChildren(name string) Service
+	Children() []Service
 	OpenChildren() error
 	CloseChildren()
 	WaitChildrenClose()
@@ -32,23 +33,12 @@ type Service interface {
 	Statistics() map[string]float64
 	AppendError(err ...error)
 	LastError() error
-
-	Debug(msg string, fields ...zap.Field)
-	Info(msg string, fields ...zap.Field)
-	Warn(msg string, fields ...zap.Field)
-	Error(msg string, fields ...zap.Field)
-	Panic(msg string, fields ...zap.Field)
-	DPanic(msg string, fields ...zap.Field)
-	Fatal(msg string, fields ...zap.Field)
 }
 
 func DoOpen(self Service, ctx context.Context, logger *zap.Logger) error {
 	self.WithLogger(self, logger)
 	self.WithContext(ctx)
 	self.WithChildContext(context.WithCancel(context.Background()))
-
-	self.Info("Opening")
-	defer self.Info("Opened")
 
 	err := self.OpenChildren()
 	if err != nil {
@@ -65,9 +55,6 @@ func DoOpen(self Service, ctx context.Context, logger *zap.Logger) error {
 }
 
 func DoClose(self Service) error {
-	self.Info("Closing")
-	defer self.Info("Closed")
-
 	select {
 	case <-self.Closed():
 		return nil
@@ -87,8 +74,6 @@ func DoClose(self Service) error {
 }
 
 func DoShutdown(self Service) error {
-	self.Info("Shutting down")
-	defer self.Info("Shutdown")
 	select {
 	case <-self.Closed():
 		return nil
@@ -154,8 +139,12 @@ func (bs *BaseService) ListenAndClose(self Service) {
 	bs.AppendError(DoClose(self))
 }
 
-func (bs *BaseService) Children(name string) Service {
+func (bs *BaseService) GetChildren(name string) Service {
 	return bs.children[name]
+}
+
+func (bs *BaseService) Children() []Service {
+	return bs.childrenArr
 }
 
 func (bs *BaseService) OpenChildren() error {
