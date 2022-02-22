@@ -8,10 +8,8 @@ package core
 import (
     "fmt"
     "github.com/pkg/errors"
-    "go.uber.org/zap"
     "go.uber.org/zap/buffer"
     "go.uber.org/zap/zapcore"
-    "strings"
 )
 
 // NewStackExtractCore returns core that extracts stacktraces from
@@ -48,10 +46,6 @@ func (c *errStackExtractCore) With(fields []zapcore.Field) zapcore.Core {
 }
 
 func (c *errStackExtractCore) Write(ent zapcore.Entry, fields []zapcore.Field) error {
-    if ent.Level.Enabled(zap.ErrorLevel) && strings.Index(ent.Message, "ErrMsg: ") != 0 {
-        ent.Message = "ErrMsg: " + ent.Message
-    }
-
     if c.stacksBuff.Len() == 0 && !hasStacksToExtract(fields) {
         return c.Core.Write(ent, fields)
     }
