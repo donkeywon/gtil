@@ -13,22 +13,22 @@ type Service interface {
 	Close() error
 	Shutdown() error
 
-	WithLogger(self Service, logger *zap.Logger)
-	WithContext(ctx context.Context)
+	withLogger(self Service, logger *zap.Logger)
+	withContext(ctx context.Context)
 	Context() context.Context
 
 	Closed() <-chan struct{}
-	CloseCh()
-	ListenAndClose(self Service)
+	closeCh()
+	listenAndClose(self Service)
 
-	GetChildren(name string) Service
-	Children() []Service
-	OpenChildren() error
-	CloseChildren()
-	WaitChildrenClose()
+	GetChildrenSvc(name string) Service
+	ChildrenSvcs() []Service
 	ChildrenLastError() error
-	WithChildContext(ctx context.Context, cancel context.CancelFunc)
 	AppendService(name string, svc Service)
+	openChildren() error
+	closeChildren()
+	waitChildrenClose()
+	withChildContext(ctx context.Context, cancel context.CancelFunc)
 
 	Statistics() map[string]float64
 	AppendError(err ...error)
@@ -36,11 +36,11 @@ type Service interface {
 }
 
 func DoOpen(self Service, ctx context.Context, logger *zap.Logger) error {
-	self.WithLogger(self, logger)
-	self.WithContext(ctx)
-	self.WithChildContext(context.WithCancel(context.Background()))
+	self.withLogger(self, logger)
+	self.withContext(ctx)
+	self.withChildContext(context.WithCancel(context.Background()))
 
-	err := self.OpenChildren()
+	err := self.openChildren()
 	if err != nil {
 		return errors.Wrapf(err, ErrOpenSvc, self.Name())
 	}
@@ -50,7 +50,7 @@ func DoOpen(self Service, ctx context.Context, logger *zap.Logger) error {
 		return errors.Wrapf(err, ErrOpenSvc, self.Name())
 	}
 
-	go self.ListenAndClose(self)
+	go self.listenAndClose(self)
 	return nil
 }
 
@@ -59,10 +59,10 @@ func DoClose(self Service) error {
 	case <-self.Closed():
 		return nil
 	default:
-		defer self.CloseCh()
+		defer self.closeCh()
 
-		self.CloseChildren()
-		self.WaitChildrenClose()
+		self.closeChildren()
+		self.waitChildrenClose()
 
 		err := multierr.Combine(self.ChildrenLastError(), self.Close())
 		if err != nil {
@@ -78,10 +78,10 @@ func DoShutdown(self Service) error {
 	case <-self.Closed():
 		return nil
 	default:
-		defer self.CloseCh()
+		defer self.closeCh()
 
 		var err error
-		for _, child := range self.Children() {
+		for _, child := range self.ChildrenSvcs() {
 			err = multierr.Append(err, DoShutdown(child))
 		}
 		err = multierr.Append(err, self.Shutdown())
@@ -113,11 +113,11 @@ func NewBase() *BaseService {
 	}
 }
 
-func (bs *BaseService) WithLogger(self Service, logger *zap.Logger) {
+func (bs *BaseService) withLogger(self Service, logger *zap.Logger) {
 	bs.Logger = logger.Named(self.Name())
 }
 
-func (bs *BaseService) WithContext(ctx context.Context) {
+func (bs *BaseService) withContext(ctx context.Context) {
 	bs.ctx = ctx
 }
 
@@ -129,25 +129,25 @@ func (bs *BaseService) Closed() <-chan struct{} {
 	return bs.closed
 }
 
-func (bs *BaseService) CloseCh() {
+func (bs *BaseService) closeCh() {
 	close(bs.closed)
 }
 
-func (bs *BaseService) ListenAndClose(self Service) {
+func (bs *BaseService) listenAndClose(self Service) {
 	<-bs.ctx.Done()
 	bs.Debug("Receive cancel, start close")
 	bs.AppendError(DoClose(self))
 }
 
-func (bs *BaseService) GetChildren(name string) Service {
+func (bs *BaseService) GetChildrenSvc(name string) Service {
 	return bs.children[name]
 }
 
-func (bs *BaseService) Children() []Service {
+func (bs *BaseService) ChildrenSvcs() []Service {
 	return bs.childrenArr
 }
 
-func (bs *BaseService) OpenChildren() error {
+func (bs *BaseService) openChildren() error {
 	var err error
 	for _, child := range bs.childrenArr {
 		err = multierr.Append(err, DoOpen(child, bs.childCtx, bs.Logger))
@@ -155,11 +155,11 @@ func (bs *BaseService) OpenChildren() error {
 	return err
 }
 
-func (bs *BaseService) CloseChildren() {
+func (bs *BaseService) closeChildren() {
 	bs.childCancel()
 }
 
-func (bs *BaseService) WaitChildrenClose() {
+func (bs *BaseService) waitChildrenClose() {
 	for _, child := range bs.childrenArr {
 		<-child.Closed()
 	}
@@ -173,7 +173,7 @@ func (bs *BaseService) ChildrenLastError() error {
 	return err
 }
 
-func (bs *BaseService) WithChildContext(ctx context.Context, cancel context.CancelFunc) {
+func (bs *BaseService) withChildContext(ctx context.Context, cancel context.CancelFunc) {
 	bs.childCtx = ctx
 	bs.childCancel = cancel
 }
