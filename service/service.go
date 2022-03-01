@@ -148,11 +148,13 @@ func (bs *BaseService) ChildrenSvcs() []Service {
 }
 
 func (bs *BaseService) openChildren() error {
-	var err error
 	for _, child := range bs.childrenArr {
-		err = multierr.Append(err, DoOpen(child, bs.childCtx, bs.Logger))
+		err := DoOpen(child, bs.childCtx, bs.Logger)
+		if err != nil {
+			return err
+		}
 	}
-	return err
+	return nil
 }
 
 func (bs *BaseService) closeChildren() {
